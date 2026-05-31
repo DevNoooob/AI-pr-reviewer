@@ -13,6 +13,7 @@ const text = {
     analyzeFailed: "\u5206\u6790\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002",
     configFailed: "\u5206\u6790\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u540e\u7aef\u670d\u52a1\u548c API Key \u914d\u7f6e\u3002",
     copied: "\u5df2\u590d\u5236",
+    copyFailed: "\u590d\u5236\u5931\u8d25",
     copyMarkdown: "\u590d\u5236 Markdown",
     analyzing: "\u5206\u6790\u4e2d...",
     startAnalyze: "\u5f00\u59cb\u5206\u6790",
@@ -75,11 +76,8 @@ copyButton.addEventListener("click", async () => {
         return;
     }
 
-    await navigator.clipboard.writeText(latestMarkdown);
-    copyButton.textContent = text.copied;
-    setTimeout(() => {
-        copyButton.textContent = text.copyMarkdown;
-    }, 1400);
+    const copied = await copyMarkdown(latestMarkdown);
+    showCopyStatus(copied);
 });
 
 refreshHistoryButton.addEventListener("click", loadHistory);
@@ -215,6 +213,57 @@ function formatTime(value) {
 function showError(message) {
     reportContent.className = "report-content";
     reportContent.innerHTML = `<div class="error">${escapeHtml(message)}</div>`;
+}
+
+async function copyMarkdown(markdown) {
+    if (navigator.clipboard && window.isSecureContext) {
+        try {
+            await navigator.clipboard.writeText(markdown);
+            return true;
+        } catch (error) {
+            // Fall through to the legacy copy path below.
+        }
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = markdown;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    textarea.style.left = "-9999px";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+
+    const selection = document.getSelection();
+    const selectedRange = selection && selection.rangeCount > 0
+        ? selection.getRangeAt(0)
+        : null;
+
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    let copied = false;
+    try {
+        copied = document.execCommand("copy");
+    } finally {
+        document.body.removeChild(textarea);
+        if (selectedRange && selection) {
+            selection.removeAllRanges();
+            selection.addRange(selectedRange);
+        }
+    }
+
+    return copied;
+}
+
+function showCopyStatus(copied) {
+    copyButton.textContent = copied ? text.copied : text.copyFailed;
+    copyButton.disabled = true;
+
+    setTimeout(() => {
+        copyButton.textContent = text.copyMarkdown;
+        copyButton.disabled = !latestMarkdown;
+    }, 1400);
 }
 
 function renderMarkdown(markdown) {
