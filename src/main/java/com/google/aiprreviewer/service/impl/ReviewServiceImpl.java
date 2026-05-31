@@ -1,10 +1,12 @@
 package com.google.aiprreviewer.service.impl;
 
+import com.google.aiprreviewer.model.ReviewRecord;
 import com.google.aiprreviewer.model.ReviewReportVO;
 import com.google.aiprreviewer.model.github.DiffEntry;
 import com.google.aiprreviewer.model.github.PullRequest;
 import com.google.aiprreviewer.service.AiReviewService;
 import com.google.aiprreviewer.service.GithubService;
+import com.google.aiprreviewer.service.ReviewRecordService;
 import com.google.aiprreviewer.service.ReviewService;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +24,11 @@ public class ReviewServiceImpl implements ReviewService {
     @Autowired
     AiReviewService aiReviewService;
 
+    @Autowired
+    ReviewRecordService reviewRecordService;
+
     @Override
-    public ReviewReportVO analyze(@NotBlank(message = "PR地址不能为空") String prUrl) {
+    public ReviewReportVO analyze(@NotBlank(message = "PR url cannot be blank") String prUrl) {
 
         PullRequest pr = githubService.getPullRequest(prUrl);
         List<DiffEntry> diffEntryList = githubService.getPullRequestFiles(prUrl);
@@ -32,9 +37,9 @@ public class ReviewServiceImpl implements ReviewService {
 
         String aiResult = aiReviewService.review(prompt);
 
-        ReviewReportVO vo =
-                new ReviewReportVO();
+        LocalDateTime analyzeTime = LocalDateTime.now();
 
+        ReviewReportVO vo = new ReviewReportVO();
         vo.setPrTitle(pr.getTitle());
         vo.setPrState(pr.getState());
         vo.setPrUrl(prUrl);
@@ -48,11 +53,20 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         vo.setReviewReport(aiResult);
+        vo.setAnalyzeTime(analyzeTime.toString());
 
-        vo.setAnalyzeTime(
-                LocalDateTime.now().toString()
-        );
+        ReviewRecord record = new ReviewRecord();
+        record.setPrUrl(prUrl);
+        record.setPrTitle(pr.getTitle());
+        record.setReviewReport(aiResult);
+        record.setCreateTime(analyzeTime);
+        reviewRecordService.save(record);
 
         return vo;
+    }
+
+    @Override
+    public List<ReviewRecord> history() {
+        return reviewRecordService.listRecent();
     }
 }

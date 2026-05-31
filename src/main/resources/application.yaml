@@ -1,10 +1,22 @@
+server:
+  port: 8080
 spring:
   application:
     name: AI-pr-reviewer
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://139.196.188.19:3306/ai_pr_reviewer?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    username: root
+    password: my20050625
+
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
 
 github:
   token: ${GITHUB_TOKEN}
 
 deepseek:
   api-key: ${DEEPSEEK_API_KEY}
-
