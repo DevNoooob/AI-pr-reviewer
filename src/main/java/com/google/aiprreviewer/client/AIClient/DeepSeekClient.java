@@ -26,8 +26,9 @@ public class DeepSeekClient {
     //延迟超时时间
     private final OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)
+            .callTimeout(200, TimeUnit.SECONDS)
             .build();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -113,7 +114,7 @@ public class DeepSeekClient {
         request.setThinking(null);
 
         //request.setReasoningEffort("high");不要 high，先保证响应速度
-        request.setReasoningEffort("medium");
+        request.setReasoningEffort("low");
 
         request.setStream(false);
 
