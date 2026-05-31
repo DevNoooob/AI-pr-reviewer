@@ -4,6 +4,8 @@ const submitButton = document.querySelector("#submitButton");
 const metaPanel = document.querySelector("#metaPanel");
 const reportContent = document.querySelector("#reportContent");
 const copyButton = document.querySelector("#copyButton");
+const historyList = document.querySelector("#historyList");
+const refreshHistoryButton = document.querySelector("#refreshHistoryButton");
 
 const text = {
     enterPrUrl: "\u8bf7\u8f93\u5165 GitHub Pull Request \u5730\u5740\u3002",
@@ -21,7 +23,9 @@ const text = {
     baseRef: "\u76ee\u6807\u5206\u652f",
     analyzeTime: "\u5206\u6790\u65f6\u95f4",
     prUrl: "PR \u5730\u5740",
-    emptyReport: "\u6682\u65e0\u8bc4\u5ba1\u62a5\u544a\u3002"
+    emptyReport: "\u6682\u65e0\u8bc4\u5ba1\u62a5\u544a\u3002",
+    emptyHistory: "\u6682\u65e0\u5386\u53f2\u8bb0\u5f55\u3002",
+    untitledPr: "Untitled PR"
 };
 
 let latestMarkdown = "";
@@ -58,6 +62,7 @@ form.addEventListener("submit", async (event) => {
         }
 
         renderResult(result.data);
+        loadHistory();
     } catch (error) {
         showError(error.message || text.configFailed);
     } finally {
@@ -76,6 +81,9 @@ copyButton.addEventListener("click", async () => {
         copyButton.textContent = text.copyMarkdown;
     }, 1400);
 });
+
+refreshHistoryButton.addEventListener("click", loadHistory);
+loadHistory();
 
 function setLoading(isLoading) {
     submitButton.disabled = isLoading;
@@ -104,6 +112,61 @@ function renderResult(data) {
             ${metaItem(text.baseRef, data.baseRef)}
             ${metaItem(text.analyzeTime, formatTime(data.analyzeTime))}
             ${metaItem(text.prUrl, linkTo(data.prUrl), true)}
+        </div>
+    `;
+
+    reportContent.className = "report-content markdown";
+    reportContent.innerHTML = renderMarkdown(latestMarkdown || text.emptyReport);
+}
+
+async function loadHistory() {
+    try {
+        const response = await fetch("/api/review/history");
+        if (!response.ok) {
+            throw new Error(`${text.requestFailed}${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.code !== 200) {
+            throw new Error(result.message || text.analyzeFailed);
+        }
+
+        renderHistory(result.data || []);
+    } catch (error) {
+        historyList.innerHTML = `<p class="history-empty">${escapeHtml(error.message || text.configFailed)}</p>`;
+    }
+}
+
+function renderHistory(records) {
+    if (!records.length) {
+        historyList.innerHTML = `<p class="history-empty">${text.emptyHistory}</p>`;
+        return;
+    }
+
+    historyList.innerHTML = records.map((record, index) => `
+        <button class="history-item" type="button" data-index="${index}">
+            <p class="history-title">${escapeHtml(record.prTitle || record.prUrl || text.untitledPr)}</p>
+            <p class="history-meta">${escapeHtml(formatTime(record.createTime))}</p>
+        </button>
+    `).join("");
+
+    historyList.querySelectorAll(".history-item").forEach((item) => {
+        item.addEventListener("click", () => {
+            const record = records[Number(item.dataset.index)];
+            renderHistoryRecord(record);
+        });
+    });
+}
+
+function renderHistoryRecord(record) {
+    latestMarkdown = record.reviewReport || "";
+    copyButton.disabled = !latestMarkdown;
+
+    metaPanel.innerHTML = `
+        <div class="meta-list">
+            ${metaItem(text.prTitle, record.prTitle)}
+            ${metaItem(text.analyzeTime, formatTime(record.createTime))}
+            ${metaItem(text.prUrl, linkTo(record.prUrl), true)}
         </div>
     `;
 

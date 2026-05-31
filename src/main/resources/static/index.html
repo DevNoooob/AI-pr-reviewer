@@ -35,12 +35,27 @@
     </section>
 
     <section class="workspace" aria-live="polite">
-        <aside class="meta-panel" id="metaPanel">
-            <div class="empty-state">
-                <span class="empty-icon">PR</span>
-                <h2>&#31561;&#24453;&#20998;&#26512;</h2>
-                <p>&#25552;&#20132; PR &#38142;&#25509;&#21518;&#65292;&#36825;&#37324;&#20250;&#23637;&#31034;&#26631;&#39064;&#12289;&#20998;&#25903;&#12289;&#29366;&#24577;&#21644;&#20998;&#26512;&#26102;&#38388;&#12290;</p>
-            </div>
+        <aside class="side-column">
+            <section class="meta-panel" id="metaPanel">
+                <div class="empty-state">
+                    <span class="empty-icon">PR</span>
+                    <h2>&#31561;&#24453;&#20998;&#26512;</h2>
+                    <p>&#25552;&#20132; PR &#38142;&#25509;&#21518;&#65292;&#36825;&#37324;&#20250;&#23637;&#31034;&#26631;&#39064;&#12289;&#20998;&#25903;&#12289;&#29366;&#24577;&#21644;&#20998;&#26512;&#26102;&#38388;&#12290;</p>
+                </div>
+            </section>
+
+            <section class="history-panel">
+                <div class="history-header">
+                    <div>
+                        <p class="eyebrow">History</p>
+                        <h2>&#21382;&#21490;&#20998;&#26512;&#35760;&#24405;</h2>
+                    </div>
+                    <button class="icon-button" type="button" id="refreshHistoryButton" title="Refresh history">&#8635;</button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <p class="history-empty">&#26242;&#26080;&#21382;&#21490;&#35760;&#24405;&#12290;</p>
+                </div>
+            </section>
         </aside>
 
         <article class="report-panel">
