@@ -18,6 +18,10 @@ public class AiReviewServiceImpl implements AiReviewService {
     @Autowired
     private final DeepSeekClient deepSeekClient;
 
+    private static final int MAX_PATCH_LENGTH = 3000;
+    private static final int MAX_TOTAL_PROMPT_LENGTH = 15000;
+
+
     @Override
     public String buildReviewPrompt(PullRequest pr, List<DiffEntry> diffEntryList) {
         StringBuilder prompt = new StringBuilder();
@@ -51,18 +55,67 @@ public class AiReviewServiceImpl implements AiReviewService {
             prompt.append("目标分支：").append(nullToEmpty(pr.getBase().getRef())).append("\n");
         }
 
-        prompt.append("\n====== PR 文件变更 Diff ======\n");
+        prompt.append("\n====== PR文件变更Diff ======\n");
 
         for (DiffEntry diff : diffEntryList) {
+
+            if (!shouldAnalyze(diff.getFilename())) {
+                continue;
+            }
+
+            if (prompt.length() >= MAX_TOTAL_PROMPT_LENGTH) {
+                prompt.append("\n... PR Diff内容过长，后续文件已省略 ...\n");
+                break;
+            }
+
             prompt.append("\n--- 文件：").append(nullToEmpty(diff.getFilename())).append(" ---\n");
             prompt.append("状态：").append(nullToEmpty(diff.getStatus())).append("\n");
             prompt.append("Diff内容：\n");
             prompt.append("```diff\n");
-            prompt.append(nullToEmpty(diff.getPatch())).append("\n");
-            prompt.append("```\n");
+            prompt.append(limitPatch(diff.getPatch()));
+            prompt.append("\n```\n");
         }
 
-        return prompt.toString();
+        return limitTotalPrompt(prompt.toString());
+    }
+
+    private boolean shouldAnalyze(String filename) {
+        if (filename == null) {
+            return false;
+        }
+
+        return filename.endsWith(".java")
+                || filename.endsWith(".kt")
+                || filename.endsWith(".py")
+                || filename.endsWith(".js")
+                || filename.endsWith(".ts")
+                || filename.endsWith(".vue");
+    }
+
+    private String limitPatch(String patch) {
+        if (patch == null) {
+            return "";
+        }
+
+        if (patch.length() <= MAX_PATCH_LENGTH) {
+            return patch;
+        }
+
+        return patch.substring(0, MAX_PATCH_LENGTH)
+                + "\n... 当前文件Diff过长，已截断 ...";
+    }
+
+    private String limitTotalPrompt(String prompt) {
+        if (prompt == null) {
+            return "";
+        }
+
+        if (prompt.length() <= MAX_TOTAL_PROMPT_LENGTH) {
+            return prompt;
+        }
+
+        return prompt.substring(0, MAX_TOTAL_PROMPT_LENGTH)
+                + "\n... Prompt总长度过长，已截断 ...";
     }
 
     @Override

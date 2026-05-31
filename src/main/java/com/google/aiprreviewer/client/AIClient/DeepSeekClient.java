@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 
 @Component
@@ -22,7 +23,12 @@ public class DeepSeekClient {
     private static final String URL =
             "https://api.deepseek.com/chat/completions";
 
-    private final OkHttpClient client = new OkHttpClient();
+    //延迟超时时间
+    private final OkHttpClient client = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -50,31 +56,27 @@ public class DeepSeekClient {
                     )
                     .build();
 
-            Response response =
-                    client.newCall(request).execute();
+            try (Response response = client.newCall(request).execute()) {
 
-            if (!response.isSuccessful()) {
-                throw new RuntimeException(
-                        "DeepSeek API调用失败: "
-                                + response.code()
-                );
+                if (!response.isSuccessful()) {
+                    String errorBody = response.body() == null ? "" : response.body().string();
+                    throw new RuntimeException("DeepSeek API调用失败: " + response.code() + "，" + errorBody);
+                }
+
+                String responseBody = response.body().string();
+
+                JsonNode root = objectMapper.readTree(responseBody);
+
+                return root
+                        .get("choices")
+                        .get(0)
+                        .get("message")
+                        .get("content")
+                        .asText();
             }
 
-            String responseBody =
-                    response.body().string();
-
-            JsonNode root =
-                    objectMapper.readTree(responseBody);
-
-            return root
-                    .get("choices")
-                    .get(0)
-                    .get("message")
-                    .get("content")
-                    .asText();
-
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("AI Review调用失败：" + e.getMessage(), e);
         }
     }
 
@@ -89,7 +91,7 @@ public class DeepSeekClient {
         messages.add(
                 new Message(
                         "system",
-                        "你是一名资深Java代码评审专家"
+                        "你是一名资深Java代码评审专家，请重点关注空指针、异常处理、事务、并发、安全、性能和可维护性问题。"
                 )
         );
 
@@ -107,9 +109,11 @@ public class DeepSeekClient {
 
         thinking.setType("enabled");
 
-        request.setThinking(thinking);
+        //request.setThinking(thinking);不要开启 thinking，避免超时
+        request.setThinking(null);
 
-        request.setReasoningEffort("high");
+        //request.setReasoningEffort("high");不要 high，先保证响应速度
+        request.setReasoningEffort("medium");
 
         request.setStream(false);
 

@@ -36,9 +36,7 @@ public class ReviewServiceImpl implements ReviewService {
                 new ReviewReportVO();
 
         vo.setPrTitle(pr.getTitle());
-
         vo.setPrState(pr.getState());
-
         vo.setPrUrl(prUrl);
 
         if (pr.getHead() != null) {
