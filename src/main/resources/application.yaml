@@ -6,5 +6,5 @@ github:
   token: ${GITHUB_TOKEN}
 
 deepseek:
-  api-key: sk-65fc547e50154cd59f4676614cdef8a9
+  api-key: ${DEEPSEEK_API_KEY}
 
